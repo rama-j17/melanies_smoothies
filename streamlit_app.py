@@ -29,29 +29,21 @@ pd_df = my_dataframe.to_pandas()
 ingredients_list = st.multiselect('Choose up to 5 ingredients:', my_dataframe, max_selections = 5)
 
 if ingredients_list:
-    # Build the ingredient string
     import json
     ingredients_json = json.dumps(ingredients_list)
 
+    for fruit_chosen in ingredients_list:
+        search_on = pd_df.loc[pd_df['FRUIT_NAME'] == fruit_chosen, 'SEARCH_ON'].iloc[0]
 
-        search_on=pd_df.loc[pd_df['FRUIT_NAME'] == fruit_chosen, 'SEARCH_ON'].iloc[0]
-        #st.write('The search value for ', fruit_chosen,' is ', search_on, '.')
-        
-        st.subheader(fruit_chosen + ' Nutrition Information' )
+        st.subheader(fruit_chosen + ' Nutrition Information')
         fruityvice_response = requests.get("https://fruityvice.com/api/fruit/" + search_on)
-        fv_df = st.dataframe(data=fruityvice_response.json(), use_container_width = True)
+        fv_df = st.dataframe(data=fruityvice_response.json(), use_container_width=True)
 
-    # Strip trailing space
-    ingredients_string = ingredients_string.strip()
-
-    # Build insert statement
+    # Build insert statement using PARSE_JSON
     my_insert_stmt = f"""
-        INSERT INTO smoothies.public.orders (ingredients, name_on_order)
-        VALUES ('{ingredients_string}', '{name_on_order}')
+        INSERT INTO smoothies.public.orders (ingredients, name_on_order, order_filled, order_ts)
+        VALUES (PARSE_JSON('{ingredients_json}'), '{name_on_order}', FALSE, CURRENT_TIMESTAMP)
     """
-
-    # Show the insert statement for debugging (optional)
-    #st.write(my_insert_stmt)
 
     # Button to confirm order
     time_to_insert = st.button('Submit Order')
@@ -59,3 +51,4 @@ if ingredients_list:
     if time_to_insert:
         session.sql(my_insert_stmt).collect()
         st.success(f'Your Smoothie is ordered, {name_on_order}!', icon="✅")
+
